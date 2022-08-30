@@ -84,6 +84,7 @@ DISPLAY_TYPE_ILI9488 = const(2)
 DISPLAY_TYPE_GC9A01 = const(3)
 DISPLAY_TYPE_ST7789 = const(4)
 DISPLAY_TYPE_ST7735 = const(5)
+DISPLAY_TYPE_ST7796 = const(6)
 
 class ili9XXX:
 
@@ -827,4 +828,51 @@ class st7735(ili9XXX):
             backlight_on=backlight_on, power_on=power_on, spihost=spihost, spimode=spimode, mhz=mhz, factor=factor, hybrid=hybrid,
             width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
             half_duplex=half_duplex, display_type=DISPLAY_TYPE_ST7735, asynchronous=asynchronous,
+            initialize=initialize, color_format=color_format)
+
+
+class st7796(ili9XXX):
+
+    # The st7796 display controller has an internal framebuffer arranged in a 320x480 pixel
+    # configuration. Physical displays with pixel sizes less than 320x480 must supply a start_x and
+    # start_y argument to indicate where the physical display begins relative to the start of the
+    # display controllers internal framebuffer.
+
+    def __init__(self,
+        miso=-1, mosi=13, clk=14, cs=15, dc=6, rst=5, power=-1, backlight=4, backlight_on=1, power_on=0,
+        spihost=esp.HSPI_HOST, spimode=0, mhz=40, factor=4, hybrid=True, width=320, height=480, start_x=0, start_y=0,
+        colormode=COLOR_MODE_BGR, rot=PORTRAIT, invert=True, double_buffer=True, half_duplex=True,
+        asynchronous=False, initialize=True, color_format=lv.COLOR_FORMAT.NATIVE_REVERSE):
+
+        # Make sure Micropython was built such that color won't require processing before DMA
+
+        if lv.color_t.__SIZE__ != 2:
+            raise RuntimeError('st7796 micropython driver requires defining LV_COLOR_DEPTH=16')
+
+        self.display_name = 'ST7796'
+
+        self.init_cmds = [
+            {'cmd':  0x01, 'data': bytes([0x0]), 'delay': 120},
+            {'cmd':  0x11, 'data': bytes([0x0]), 'delay': 120},
+            {'cmd':  0xF0, 'data': bytes([0xC3])},
+            {'cmd':  0xF0, 'data': bytes([0x96])},
+            {'cmd':  0x36, 'data': bytes([0x48])},
+            {'cmd':  0x3A, 'data': bytes([0x55])},
+            {'cmd':  0xB4, 'data': bytes([0x01])},
+            {'cmd':  0xB6, 'data': bytes([0x80, 0x02, 0x3B])},
+            {'cmd':  0xE8, 'data': bytes([0x40, 0x8A, 0x0, 0x0, 0x29, 0x19, 0xA5, 0x33])},
+            {'cmd':  0xC1, 'data': bytes([0x06])},
+            {'cmd':  0xC2, 'data': bytes([0xA7])},
+            {'cmd':  0xC5, 'data': bytes([0x18]), 'delay': 120},
+            {'cmd':  0xE0, 'data': bytes([0xF0, 0x09, 0x0B, 0x06, 0x04, 0x15, 0x2F, 0x54, 0x42, 0x3C, 0x17, 0x14, 0x18, 0x18])},
+            {'cmd':  0xE1, 'data': bytes([0xE0, 0x09, 0x0B, 0x06, 0x04, 0x03, 0x2B, 0x43, 0x42, 0x3B, 0x16, 0x14, 0x17, 0x18]), 'delay': 120},
+            {'cmd':  0xF0, 'data': bytes([0x3C])},
+            {'cmd':  0xF0, 'data': bytes([0x69]), 'delay': 120},
+            {'cmd':  0x29, 'data': bytes([0x0])},
+        ]
+
+        super().__init__(miso=miso, mosi=mosi, clk=clk, cs=cs, dc=dc, rst=rst, power=power, backlight=backlight,
+            backlight_on=backlight_on, power_on=power_on, spihost=spihost, spimode=spimode, mhz=mhz, factor=factor, hybrid=hybrid,
+            width=width, height=height, start_x=start_x, start_y=start_y, invert=invert, double_buffer=double_buffer,
+            half_duplex=half_duplex, display_type=DISPLAY_TYPE_ST7796, asynchronous=asynchronous,
             initialize=initialize, color_format=color_format)
